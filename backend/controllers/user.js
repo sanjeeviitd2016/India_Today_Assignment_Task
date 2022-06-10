@@ -97,20 +97,35 @@ const updatePassword = catchAsyncAwait(async (req, res, next) => {
 });
 
 const updateProfile = catchAsyncAwait(async (req, res, next) => {
-  if (req.body.email) {
-    const user = await users.findOne({ email: req.body.email });
-    if (user) {
-      return next(new errorHandler("this email already exits", 201));
-    }
+  const avatar= req.body.avatar;
+  // if (req.body.email) {
+  //   const user = await users.findOne({ email: req.body.email });
+  //   if (user) {
+  //     return next(new errorHandler("this email already exits", 201));
+  //   }
+  // }
+  const User = await users.findById(req.user._id);
+  if (avatar) {
+    await cloudinary.v2.uploader.destroy(User.avatar.public_id);
+
+    const myCloud = await cloudinary.v2.uploader.upload(avatar, {
+      folder: "avatars",
+    });
+    User.avatar.public_id = myCloud.public_id;
+    User.avatar.url = myCloud.secure_url;
   }
+
+  await User.save();
+  
   const user = await users.findByIdAndUpdate(req.user.id, req.body, {
     new: true,
     runValidators: true,
     useFindAndModify: false,
   });
 
+  
   await user.save();
-
+  console.log("user",user)
   res
     .status(200)
     .json({ message: "Profile Updated successfully", success: true, user });
